@@ -111,14 +111,3 @@ class Package:
             sh.scp(self.srpm_name, destination)
         else:
             sh.cp(self.srpm_name, destination)
-
-with CollectionDownloader("mariadb100") as downloader:
-    downloader.add_meta()
-    print downloader.meta_pkg.srpm_name
-    downloader.meta_pkg.copy_srpm("/home/adam/")
-    downloader.meta_pkg.copy_srpm("asamalik@fedorapeople.org:public_html/", remote=True)
-
-    downloader.add_package("mariadb")
-    print downloader.pkgs[0].srpm_name
-    downloader.pkgs[0].copy_srpm("/home/adam/")
-    downloader.pkgs[0].copy_srpm("asamalik@fedorapeople.org:public_html/", remote=True)
