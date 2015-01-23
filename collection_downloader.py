@@ -35,18 +35,21 @@ class CollectionDownloader:
     """
     Downloads and stores the srpm files locally.
 
+    API provided:
+        add_meta()
+        add_pkg(<name>)
+        copy_pkgs(<destination>,[remote=True])
+
     Example usage:
     ======================================================================
     with CollectionDownloader("mariadb100") as downloader:
         downloader.add_meta()
-        print downloader.meta_pkg.srpm_name
-        downloader.meta_pkg.copy_srpm("/home/adam/")
-        downloader.meta_pkg.copy_srpm("adam@example.com:", remote=True)
+        downloader.add_pkg("mariadb")
+        downloader.copy_pkgs("/home/adam/")
+        downloader.copy_pkgs("asamalik@example.com:public_html/", remote=True)
 
-        downloader.add_package("mariadb")
+        print downloader.meta_pkg.srpm_name
         print downloader.pkgs[0].srpm_name
-        downloader.pkgs[0].copy_srpm("/home/adam/")
-        downloader.pkgs[0].copy_srpm("adam@example.com:", remote=True)
     ======================================================================
     """
     # Config:
@@ -60,26 +63,43 @@ class CollectionDownloader:
         self.scl_name = scl_name
 
     def __enter__(self):
-        self.tmp_dir = tempfile.mkdtemp(prefix="scl-rebuild-")
+        self.tmp_git_dir = tempfile.mkdtemp(prefix="scl-rebuild-")
+        self.tmp_pkg_dir = tempfile.mkdtemp(prefix="scl-rebuild-pkgs-")
+
+        self.scl_dir = "/".join([self.tmp_pkg_dir, self.scl_name])
+        self.pkgs_dir = "/".join([self.tmp_pkg_dir, self.scl_name, "pkgs"])
+
+        sh.mkdir("-p", self.pkgs_dir)
         return self
 
     def __exit__(self, type, value, traceback):
-        shutil.rmtree(self.tmp_dir)
+        shutil.rmtree(self.tmp_git_dir)
+        shutil.rmtree(self.tmp_pkg_dir)
 
     def add_meta(self):
         self.meta_pkg = Package(self, self.scl_name)
         self.meta_pkg.download()
         self.meta_pkg.make_srpm()
+        self.meta_pkg.get_srpm(self.scl_dir)
 
-    def add_package(self, name):
+    def add_pkg(self, name):
         pkg = Package(self, name)
         pkg.download()
         pkg.make_srpm()
+        pkg.get_srpm(self.pkgs_dir)
         self.pkgs.append(pkg)
+
+    def copy_pkgs(self, destination, remote=False):
+        if remote:
+            sh.scp("-r", self.scl_dir, destination)
+        else:
+            sh.cp("-r", self.scl_dir, destination)
 
 class Package:
     """
     Represents a single package. Needed by CollectionDownloader.
+
+    This class does not implement any stable public API.
     """
     def __init__(self, downloader, name):
         self.downloader = downloader
@@ -88,26 +108,20 @@ class Package:
         self.srpm_name = ""
 
     def download(self):
-        sh.cd(downloader.tmp_dir)
+        sh.cd(self.downloader.tmp_git_dir)
         sh.git("clone", self.git_url)
         sh.cd(self.name)
-        sh.git("checkout", "scl-" + downloader.scl_name + "-el7")
+        sh.git("checkout", "scl-" + self.downloader.scl_name + "-el7")
         sh.fedpkg("sources")
 
     def make_srpm(self):
-        sh.cd(downloader.tmp_dir)
-        sh.cd(self.name)
-        sh.rpmbuild("-bs", "--define", "scl {}".format(downloader.scl_name),
+        sh.cd("/".join([self.downloader.tmp_git_dir, self.name]))
+        sh.rpmbuild("-bs", "--define", "scl {}".format(self.downloader.scl_name),
                            "--define", "_topdir .",
                            "--define", "_sourcedir .",
                            "{}.spec".format(self.name))
         self.srpm_name = str(sh.ls("SRPMS")).strip()
 
-    def copy_srpm(self, destination, remote=False):
-        sh.cd(downloader.tmp_dir)
-        sh.cd(self.name)
-        sh.cd("SRPMS")
-        if remote:
-            sh.scp(self.srpm_name, destination)
-        else:
-            sh.cp(self.srpm_name, destination)
+    def get_srpm(self, destination):
+        sh.mv("/".join([self.downloader.tmp_git_dir,
+                        self.name, "SRPMS", self.srpm_name]), destination)
