@@ -21,8 +21,8 @@
 #   Adam Samalik <adam@samalik.com>
 
 
-""" 
-Part of scl-rebuild: a simple script that rebuilds Software Collections from CentOS 
+"""
+Part of scl-rebuild: a simple script that rebuilds Software Collections from CentOS
 dist-git in the Copr Build Service.
 """
 

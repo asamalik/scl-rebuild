@@ -21,8 +21,8 @@
 #   Adam Samalik <adam@samalik.com>
 
 
-""" 
-A simple script that rebuilds Software Collections from CentOS 
+"""
+A simple script that rebuilds Software Collections from CentOS
 dist-git in the Copr Build Service.
 """
 
@@ -41,7 +41,7 @@ from collection_downloader import CollectionDownloader
 #
 # TODO: MAIN SCRIPT
 #
-# Gets:    
+# Gets:
 # - Scl name:
 #       mariadb100
 #
@@ -55,8 +55,8 @@ from collection_downloader import CollectionDownloader
 #
 
 def main():
-    parser = argparse.ArgumentParser(description=""" 
-        A simple script that rebuilds Software Collections from CentOS 
+    parser = argparse.ArgumentParser(description="""
+        A simple script that rebuilds Software Collections from CentOS
         dist-git in the Copr Build Service.
         """, formatter_class=RawTextHelpFormatter)
 
@@ -79,7 +79,6 @@ def main():
         help="Just uploads the srpms without building them.")
     parser.add_argument("-v", "--verbose", action="store_true",
         help="Increases output verbosity.")
-    
     args = parser.parse_args()
 
     sclname = args.sclname
