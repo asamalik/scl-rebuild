@@ -31,30 +31,10 @@ import argparse
 from argparse import RawTextHelpFormatter
 
 from collection_downloader import CollectionDownloader
-#
-# TODO: PACKAGE LIST GETTER
-#
-# Gets:
-# - Scl name:
-#       mariadb100
-#
-#
-# TODO: MAIN SCRIPT
-#
-# Gets:
-# - Scl name:
-#       mariadb100
-#
-# - Storage:
-#       asamalik@fedorapeople.org:/public_html/
-#       https://asamalik.fedorapeople.org/
-#
-# - Copr project:
-#       asamalik/mariadb100
-#
-#
+from collection_builder import CollectionBuilder
 
-def main():
+
+def setup_parser():
     parser = argparse.ArgumentParser(description="""
         A simple script that rebuilds Software Collections from CentOS
         dist-git in the Copr Build Service.
@@ -72,13 +52,19 @@ def main():
         help="Set the URL from which the srpms will be accessible."
              "\n(Default: https://<username>.fedorapeople.org/<sclname>)")
     parser.add_argument("-c", "--copr-project",
-        help="Set the name of your Copr project.")
+        help="Set the name of your Copr project."
+             "\n(Default: <sclname>)")
     parser.add_argument("-l", "--local-download", action="store_true",
         help="Downloads the srpms locally without building them.")
     parser.add_argument("-n", "--no-build", action="store_true",
         help="Just uploads the srpms without building them.")
     parser.add_argument("-v", "--verbose", action="store_true",
         help="Increases output verbosity.")
+    return parser
+
+
+def main():
+    parser = setup_parser()
     args = parser.parse_args()
 
     sclname = args.sclname
@@ -87,15 +73,23 @@ def main():
                             username, sclname)
     destination = args.destination or "{0}@fedorapeople.org:public_html/".format(
                             username)
-    copr_project = args.copr_project or "{0}/{1}".format(
-                            username, sclname)
+    copr_project = args.copr_project or sclname
 
     with CollectionDownloader(sclname) as downloader:
+        downloader.verbosity = args.verbose
+        print "\nGetting sources..."
         downloader.add_meta()
+        # I just decided here that all collections will contain only this pkg:
         downloader.add_pkg("mariadb")
         downloader.copy_pkgs(destination, remote=(not args.local_download))
-        print "This script is not finished and can't build at the moment"
-        print downloader.pkg_list(source_url)
+        pkgs = downloader.pkg_list(source_url)
+
+    if not args.local_download and not args.no_build:
+        builder = CollectionBuilder(username, sclname, copr_project, pkgs)
+        result = builder.build_meta()
+        if result:
+            builder.build_pkgs()
+
 
 
 if __name__ == "__main__":

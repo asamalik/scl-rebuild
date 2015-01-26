@@ -40,6 +40,7 @@ class CollectionDownloader:
         add_pkg(<name>)
         copy_pkgs(<destination>,[remote=True])
         pkg_list([path=<some_desired_prefix_path>])
+        verbosity = True
 
     Example usage:
     ======================================================================
@@ -55,6 +56,7 @@ class CollectionDownloader:
     """
     # Config:
     distgit_url = "https://git.centos.org/git/sig-sclo/"
+    verbosity = False
 
     # Content:
     meta_pkg = None
@@ -91,10 +93,14 @@ class CollectionDownloader:
         self.pkgs.append(pkg)
 
     def copy_pkgs(self, destination, remote=False):
+        if self.verbosity:
+            print "\nCopying srpms to: {}".format(destination)
         if remote:
             sh.scp("-r", self.scl_dir, destination)
         else:
             sh.cp("-r", self.scl_dir, destination)
+        if self.verbosity:
+            print "  Done."
 
     def pkg_list(self, path=""):
         if path and path[-1] != "/":
@@ -103,6 +109,7 @@ class CollectionDownloader:
         for pkg in self.pkgs:
             pkgs.append(path + "pkgs/" +pkg.srpm_name)
         return pkgs
+
 
 class Package:
     """
@@ -118,6 +125,8 @@ class Package:
 
     def download(self):
         sh.cd(self.downloader.tmp_git_dir)
+        if self.downloader.verbosity:
+            print "\nCloning: {}".format(self.git_url)
         sh.git("clone", self.git_url)
         sh.cd(self.name)
         sh.git("checkout", "scl-" + self.downloader.scl_name + "-el7")
@@ -125,11 +134,15 @@ class Package:
 
     def make_srpm(self):
         sh.cd("/".join([self.downloader.tmp_git_dir, self.name]))
+        if self.downloader.verbosity:
+            print "Creating srpm..."
         sh.rpmbuild("-bs", "--define", "scl {}".format(self.downloader.scl_name),
                            "--define", "_topdir .",
                            "--define", "_sourcedir .",
                            "{}.spec".format(self.name))
         self.srpm_name = str(sh.ls("SRPMS")).strip()
+        if self.downloader.verbosity:
+            print "  Done: {}".format(self.srpm_name)
 
     def get_srpm(self, destination):
         sh.mv("/".join([self.downloader.tmp_git_dir,
