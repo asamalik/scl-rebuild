@@ -39,6 +39,7 @@ class CollectionDownloader:
         add_meta()
         add_pkg(<name>)
         copy_pkgs(<destination>,[remote=True])
+        pkg_list([path=<some_desired_prefix_path>])
 
     Example usage:
     ======================================================================
@@ -94,6 +95,14 @@ class CollectionDownloader:
             sh.scp("-r", self.scl_dir, destination)
         else:
             sh.cp("-r", self.scl_dir, destination)
+
+    def pkg_list(self, path=""):
+        if path and path[-1] != "/":
+            path += "/"
+        pkgs = [path + self.meta_pkg.srpm_name]
+        for pkg in self.pkgs:
+            pkgs.append(path + "pkgs/" +pkg.srpm_name)
+        return pkgs
 
 class Package:
     """

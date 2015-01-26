@@ -94,6 +94,8 @@ def main():
         downloader.add_meta()
         downloader.add_pkg("mariadb")
         downloader.copy_pkgs(destination, remote=(not args.local_download))
+        print "This script is not finished and can't build at the moment"
+        print downloader.pkg_list(source_url)
 
 
 if __name__ == "__main__":
